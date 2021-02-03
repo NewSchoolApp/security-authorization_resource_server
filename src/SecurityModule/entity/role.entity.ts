@@ -1,6 +1,7 @@
 import {
   Column,
   Entity,
+  JoinTable,
   ManyToMany,
   OneToMany,
   PrimaryGeneratedColumn,
@@ -27,7 +28,10 @@ export class Role extends Audit {
     return slugify(this.name);
   }
 
+  set slug(name: string) {}
+
   @ManyToMany<Policy>(() => Policy, (policy) => policy.roles)
+  @JoinTable()
   policies: Policy[];
 
   @OneToMany<ClientCredentials>(

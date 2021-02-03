@@ -197,6 +197,7 @@ export class SecurityService {
     authenticatedUser: ClientCredentials | User,
     { accessTokenValidity, refreshTokenValidity }: GenerateLoginObjectOptions,
   ): GeneratedTokenDTO {
+    console.log('usuario', authenticatedUser);
     let loginObject: GeneratedTokenDTO = {
       accessToken: this.jwtService.sign(classToPlain(authenticatedUser), {
         expiresIn: accessTokenValidity,

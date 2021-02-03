@@ -1,4 +1,10 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  BeforeInsert,
+  Column,
+  Entity,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { Expose } from 'class-transformer';
 import slugify from 'slugify';
 import { Role } from './role.entity';
@@ -13,6 +19,8 @@ export class ClientCredentials extends Audit {
   @Column()
   name: string;
 
+  private _slug: string;
+
   @Column({
     nullable: false,
     unique: true,
@@ -20,6 +28,8 @@ export class ClientCredentials extends Audit {
   get slug(): string {
     return slugify(this.name);
   }
+
+  set slug(name: string) {}
 
   @Column({ type: 'varchar' })
   secret: string;
@@ -53,5 +63,10 @@ export class ClientCredentials extends Audit {
 
   set authorizedGrantTypes(authorizedGrantTypes: string[]) {
     this._authorizedGrantTypes = authorizedGrantTypes.join(',');
+  }
+
+  @BeforeInsert()
+  setId() {
+    this.slug = slugify(this.name);
   }
 }

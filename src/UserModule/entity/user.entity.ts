@@ -121,7 +121,6 @@ export class User extends Audit {
   @Expose()
   inviteKey: string;
 
-  @Column({ nullable: true })
   public invitedByUserId?: string;
 
   @ManyToOne(() => User, (user) => user.id)

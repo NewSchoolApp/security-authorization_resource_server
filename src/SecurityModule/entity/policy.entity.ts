@@ -19,6 +19,8 @@ export class Policy extends Audit {
     return slugify(this.name);
   }
 
+  set slug(name: string) {}
+
   @ManyToMany<Role>(() => Role, (role: Role) => role.policies)
   roles: Role[];
 }

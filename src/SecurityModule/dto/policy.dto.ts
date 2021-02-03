@@ -12,4 +12,6 @@ export class PolicyDTO {
   get slug(): string {
     return slugify(this.name);
   }
+
+  set slug(name: string) {}
 }
