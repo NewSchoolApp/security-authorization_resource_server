@@ -51,7 +51,7 @@ export class UserService {
   public async findById(id: string): Promise<User> {
     const response: User[] = await this.repository.find({
       where: { id },
-      relations: ['role'],
+      relations: ['role', 'role.policies'],
     });
     const user = response[0];
     if (!user) {
