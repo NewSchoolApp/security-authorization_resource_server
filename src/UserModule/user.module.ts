@@ -8,22 +8,29 @@ import { UserController } from './controller/user.controller';
 import { UserService } from './service/user.service';
 import { UserMapper } from './mapper/user.mapper';
 import { ChangePasswordService } from './service/change-password.service';
-import { SchoolController } from './controller/school.controller';
-import { SchoolService } from './service/school.service';
 import { UploadModule } from '../UploadModule/upload.module';
-import { CityController } from './controller/city.controller';
-import { CityService } from './service/city.service';
-import { StateService } from './service/state.service';
-import { StateController } from './controller/state.controller';
-import { SemearService } from './service/semear.service';
-import { School } from './entity/school.entity';
+import { SqsModule } from '@ssut/nestjs-sqs';
+import * as AWS from 'aws-sdk';
+
+const SQS = new AWS.SQS({ apiVersion: '2012-11-05', region: 'us-east-2' });
 
 @Module({
   imports: [
     CacheModule.register(),
+    SqsModule.register({
+      consumers: [],
+      producers: [
+        {
+          batchSize: 1,
+          name: 'userRewardCompleteRegistration',
+          queueUrl: process.env.USER_REWARD_COMPLETE_REGISTRATION_QUEUE_URL,
+          region: 'us-east-2',
+          sqs: SQS,
+        },
+      ],
+    }),
     TypeOrmModule.forFeature([
       User,
-      School,
       UserRepository,
       ChangePassword,
       ChangePasswordRepository,
@@ -31,21 +38,8 @@ import { School } from './entity/school.entity';
     HttpModule,
     UploadModule,
   ],
-  controllers: [
-    UserController,
-    SchoolController,
-    CityController,
-    StateController,
-  ],
-  providers: [
-    UserService,
-    UserMapper,
-    ChangePasswordService,
-    SchoolService,
-    CityService,
-    StateService,
-    SemearService,
-  ],
+  controllers: [UserController],
+  providers: [UserService, UserMapper, ChangePasswordService],
   exports: [UserService, UserMapper],
 })
 export class UserModule {}

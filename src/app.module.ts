@@ -8,6 +8,7 @@ import { SecurityModule } from './SecurityModule/security.module';
 import { UploadModule } from './UploadModule/upload.module';
 import { MailerAsyncOptions } from '@nest-modules/mailer/dist/interfaces/mailer-async-options.interface';
 import { MailerModule } from '@nest-modules/mailer';
+import { SqsModule } from '@ssut/nestjs-sqs';
 
 const typeOrmAsyncModule: TypeOrmModuleAsyncOptions = {
   imports: [ConfigModule],

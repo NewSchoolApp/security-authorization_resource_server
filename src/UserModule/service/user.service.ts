@@ -29,7 +29,10 @@ import { UserUpdateDTO } from '../dto/user-update.dto';
 import { ChangePasswordDTO } from '../dto/change-password.dto';
 import { UploadService } from '../../UploadModule/service/upload.service';
 import { RoleEnum } from '../../SecurityModule/enum/role.enum';
-import { SemearService } from './semear.service';
+import { SqsService } from '@ssut/nestjs-sqs';
+import { v4 as uuidv4 } from 'uuid';
+import { UserMapper } from '../mapper/user.mapper';
+import { UserDTO } from '../dto/user.dto';
 
 @Injectable()
 export class UserService {
@@ -41,7 +44,8 @@ export class UserService {
     private readonly configService: ConfigService,
     private readonly roleService: RoleService,
     private readonly uploadService: UploadService,
-    private readonly semearService: SemearService,
+    private readonly mapper: UserMapper,
+    private readonly sqsService: SqsService,
   ) {}
 
   public async getAll(): Promise<User[]> {
@@ -85,14 +89,7 @@ export class UserService {
       );
       invitedByUserId = invitedByUser ? invitedByUser.id : null;
     }
-
-    const newStudent = await this.add({ ...user, invitedByUserId });
-
-    if (inviteKey) {
-      // iniciar gameficação
-      // this.publisherService.emitInviteUserReward(inviteKey);
-    }
-    return newStudent;
+    return await this.add({ ...user, invitedByUserId });
   }
 
   public async add(user: NewUserDTO): Promise<User> {
@@ -136,9 +133,11 @@ export class UserService {
       id: user.id,
     });
     if (updatedUser.role.name === RoleEnum.STUDENT) {
-      // this.publisherService.emitupdateStudent(id);
+      await this.sqsService.send<UserDTO>('userRewardCompleteRegistration', {
+        body: await this.mapper.toDtoAsync(updatedUser),
+        id: uuidv4(),
+      });
     }
-    this.semearService.sendSemearNotification(updatedUser);
     return updatedUser;
   }
 
