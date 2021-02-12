@@ -29,7 +29,6 @@ import { UserUpdateDTO } from '../dto/user-update.dto';
 import { ChangePasswordDTO } from '../dto/change-password.dto';
 import { UploadService } from '../../UploadModule/service/upload.service';
 import { RoleEnum } from '../../SecurityModule/enum/role.enum';
-import { SqsService } from '@ssut/nestjs-sqs';
 import { v4 as uuidv4 } from 'uuid';
 import { UserMapper } from '../mapper/user.mapper';
 import { UserDTO } from '../dto/user.dto';
@@ -45,7 +44,6 @@ export class UserService {
     private readonly roleService: RoleService,
     private readonly uploadService: UploadService,
     private readonly mapper: UserMapper,
-    private readonly sqsService: SqsService,
   ) {}
 
   public async getAll(): Promise<User[]> {
@@ -132,12 +130,6 @@ export class UserService {
       role,
       id: user.id,
     });
-    if (updatedUser.role.name === RoleEnum.STUDENT) {
-      await this.sqsService.send<UserDTO>('userRewardCompleteRegistration', {
-        body: await this.mapper.toDtoAsync(updatedUser),
-        id: uuidv4(),
-      });
-    }
     return updatedUser;
   }
 
