@@ -147,9 +147,11 @@ export class UserController {
     description:
       'thrown if there is not an authorization token or if authorization token does not have ADMIN role',
   })
-  @UserIdParam('id')
-  @UseGuards(StudentGuard)
-  @NeedRole(RoleEnum.ADMIN, RoleEnum.STUDENT)
+  @NeedRole(
+    RoleEnum.ADMIN,
+    RoleEnum.STUDENT,
+    '@AUTHORIZATION-RESOURCE-SERVER/GET-USER',
+  )
   @UseGuards(RoleGuard)
   public async findById(@Param('id') id: UserDTO['id']): Promise<UserDTO> {
     this.logger.log(`user id: ${id}`);

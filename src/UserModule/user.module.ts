@@ -10,7 +10,6 @@ import { UserMapper } from './mapper/user.mapper';
 import { ChangePasswordService } from './service/change-password.service';
 import { UploadModule } from '../UploadModule/upload.module';
 
-
 @Module({
   imports: [
     CacheModule.register(),
