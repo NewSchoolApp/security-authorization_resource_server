@@ -94,7 +94,7 @@ export class UserService {
   public async add(user: NewUserDTO): Promise<User> {
     const role: Role = await this.roleService.findByRoleName(user.role);
     const salt: string = this.createSalt();
-    const hashPassword: string = this.createHashedPassword(user.password, salt);
+    const hashPassword: string = await this.createHashedPassword(user.password);
     try {
       return await this.repository.save({
         ...user,
@@ -198,18 +198,26 @@ export class UserService {
     if (changePasswordDTO.newPassword !== changePasswordDTO.confirmNewPassword)
       throw new BadRequestException('New passwords are not the same');
     const user: User = await this.findById(id);
-    const oldPassword = this.createHashedPassword(
-      changePasswordDTO.oldPassword,
-      user.salt,
+    const pwd: SecurePassword = securePassword();
+    const result = pwd.verify(
+      Buffer.from(changePasswordDTO.oldPassword),
+      Buffer.from(user.password),
     );
-    if (oldPassword !== user.password)
+    if (result === securePassword.INVALID) {
       throw new BadRequestException(
         'Old password does not match with current password',
       );
-    user.salt = this.createSalt();
-    user.password = this.createHashedPassword(
+    }
+    if (result === securePassword.INVALID_UNRECOGNIZED_HASH) {
+      const valid = user.validPassword(changePasswordDTO.newPassword);
+      if (!valid) {
+        throw new BadRequestException(
+          'Old password does not match with current password',
+        );
+      }
+    }
+    user.password = await this.createHashedPassword(
       changePasswordDTO.newPassword,
-      user.salt,
     );
     return await this.repository.save(user);
   }
@@ -230,9 +238,8 @@ export class UserService {
       );
     }
     user.salt = this.createSalt();
-    user.password = this.createHashedPassword(
+    user.password = await this.createHashedPassword(
       changePasswordDTO.newPassword,
-      user.salt,
     );
     return await this.repository.save(user);
   }
@@ -249,10 +256,8 @@ export class UserService {
     const { user }: ChangePassword = await this.changePasswordService.findById(
       changePasswordRequestId,
     );
-    user.salt = this.createSalt();
-    user.password = this.createHashedPassword(
+    user.password = await this.createHashedPassword(
       changePasswordDTO.newPassword,
-      user.salt,
     );
     return await this.repository.save(user);
   }
@@ -284,10 +289,10 @@ export class UserService {
     return crypto.randomBytes(16).toString('hex');
   }
 
-  private createHashedPassword(password: string, salt: string): string {
-    return crypto
-      .pbkdf2Sync(password, salt, 1000, 64, `sha512`)
-      .toString(`hex`);
+  private async createHashedPassword(password: string): Promise<string> {
+    const pwd: SecurePassword = securePassword();
+    const hashedPassword = await pwd.hash(Buffer.from(password));
+    return hashedPassword.toString();
   }
 
   private async sendChangePasswordEmail(
