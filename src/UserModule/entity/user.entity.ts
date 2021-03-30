@@ -14,6 +14,9 @@ import { Audit } from '../../CommonsModule/entity/audit.entity';
 import { GenderEnum } from '../enum/gender.enum';
 import { EscolarityEnum } from '../enum/escolarity.enum';
 import { UserProfileEnum } from '../enum/user-profile.enum';
+import SecurePassword from 'secure-password';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const securePassword = require('secure-password');
 
 @Entity()
 export class User extends Audit {
@@ -158,5 +161,10 @@ export class User extends Audit {
       .pbkdf2Sync(password, this.salt, 1000, 64, `sha512`)
       .toString(`hex`);
     return this.password === hash;
+  }
+
+  async validPasswordv2(password: string) {
+    const pwd: SecurePassword = securePassword();
+    return pwd.verify(Buffer.from(password), Buffer.from(this.password));
   }
 }

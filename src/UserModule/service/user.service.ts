@@ -28,10 +28,11 @@ import { NewUserDTO } from '../dto/new-user.dto';
 import { UserUpdateDTO } from '../dto/user-update.dto';
 import { ChangePasswordDTO } from '../dto/change-password.dto';
 import { UploadService } from '../../UploadModule/service/upload.service';
-import { RoleEnum } from '../../SecurityModule/enum/role.enum';
-import { v4 as uuidv4 } from 'uuid';
 import { UserMapper } from '../mapper/user.mapper';
-import { UserDTO } from '../dto/user.dto';
+import SecurePassword from 'secure-password';
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const securePassword = require('secure-password');
 
 @Injectable()
 export class UserService {
@@ -133,6 +134,15 @@ export class UserService {
     return updatedUser;
   }
 
+  public async hashUserPassword(user: User, password: string): Promise<User> {
+    const pwd: SecurePassword = securePassword();
+    const hashBuffer = await pwd.hash(Buffer.from(password));
+    return this.repository.save({
+      ...user,
+      password: hashBuffer.toString('utf-8'),
+    });
+  }
+
   public async forgotPassword(
     forgotPasswordDTO: ForgotPasswordDTO,
   ): Promise<string> {
@@ -147,17 +157,6 @@ export class UserService {
   public async findByEmail(email: string): Promise<User> {
     const user: User = await this.repository.findByEmail(email);
     if (!user) {
-      throw new UserNotFoundError();
-    }
-    return user;
-  }
-
-  public async findByEmailAndPassword(
-    email: string,
-    password: string,
-  ): Promise<User> {
-    const user: User = await this.findByEmail(email);
-    if (!user.validPassword(password)) {
       throw new UserNotFoundError();
     }
     return user;
