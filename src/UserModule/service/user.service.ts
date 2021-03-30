@@ -139,7 +139,7 @@ export class UserService {
     const hashBuffer = await pwd.hash(Buffer.from(password));
     return this.repository.save({
       ...user,
-      password: hashBuffer.toString('utf-8'),
+      password: hashBuffer.toString(),
     });
   }
 
