@@ -17,6 +17,8 @@ import { ClientCredentialsRepository } from '../repository/client-credentials.re
 import { GeneratedTokenDTO } from '../dto/generated-token.dto';
 import { GoogleAuthUserDTO } from '../dto/google-auth-user.dto';
 import { AppConfigService as ConfigService } from '../../ConfigModule/service/app-config.service';
+import { ErrorEnum } from '../../CommonsModule/enum/error.enum';
+import { ErrorObject } from '../../CommonsModule/dto/error-object.dto';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const securePassword = require('secure-password');
 
@@ -168,7 +170,7 @@ export class SecurityService {
       });
     }
     if (user.googleSub !== googleAuthUser.sub) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException(new ErrorObject('USER_NOT_FOUND'));
     }
     return this.generateLoginObject(user, {
       accessTokenValidity: clientCredentials.accessTokenValidity,

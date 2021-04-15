@@ -20,11 +20,11 @@ export class RoleGuard implements CanActivate {
   ) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const roles: RoleEnum[] = this.reflector.get<RoleEnum[]>(
-      'roles',
-      context.getHandler(),
-    );
-    if (!roles) {
+    const roles: string[] =
+      this.reflector.get<string[]>('roles', context.getHandler()) || [];
+    const policies: string[] =
+      this.reflector.get<string[]>('policies', context.getHandler()) || [];
+    if (!roles.length && !policies.length) {
       return true;
     }
 
@@ -46,9 +46,17 @@ export class RoleGuard implements CanActivate {
       }
       throw new InternalServerErrorException(e);
     }
-    const hasPermission: boolean = roles.some(
-      (role) => role === user.role.name,
-    );
-    return user?.role && hasPermission;
+
+    const hasRoles = roles.length
+      ? roles.some((role) => role === user.role.name)
+      : true;
+
+    const hasPolicies = policies.length
+      ? policies.some((policy) =>
+          user.role.policies.some((userPolicy) => userPolicy.name === policy),
+        )
+      : true;
+
+    return hasRoles || hasPolicies;
   }
 }
