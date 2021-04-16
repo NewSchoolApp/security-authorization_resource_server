@@ -3,25 +3,19 @@ import {
   Controller,
   forwardRef,
   Get,
-  Headers,
   HttpCode,
   Inject,
   Logger,
   Param,
   Post,
   Put,
-  Query,
-  Res,
-  UploadedFile,
   UseGuards,
-  UseInterceptors,
 } from '@nestjs/common';
 import { UserService } from '../service/user.service';
 import { UserMapper } from '../mapper/user.mapper';
 import {
   ApiBearerAuth,
   ApiBody,
-  ApiCreatedResponse,
   ApiGoneResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -32,8 +26,6 @@ import {
 } from '@nestjs/swagger';
 import { RoleEnum } from '../../SecurityModule/enum/role.enum';
 import { SecurityService } from '../../SecurityModule/service/security.service';
-import { User } from '../entity/user.entity';
-import { CertificateUserDTO } from '../dto/certificate-user.dto';
 import { AdminChangePasswordDTO } from '../dto/admin-change-password.dto';
 import { ChangePasswordRequestIdDTO } from '../dto/change-password-request-id.dto';
 import { ForgotPasswordDTO } from '../dto/forgot-password';
@@ -41,17 +33,12 @@ import { ChangePasswordForgotFlowDTO } from '../dto/change-password-forgot-flow.
 import { UserDTO } from '../dto/user.dto';
 import { NewUserDTO } from '../dto/new-user.dto';
 import { UserUpdateDTO } from '../dto/user-update.dto';
-import { NewStudentDTO } from '../dto/new-student.dto';
 import { Constants } from '../../CommonsModule/constants';
-import { NeedRole } from '../../CommonsModule/guard/role-metadata.guard';
 import { RoleGuard } from '../../CommonsModule/guard/role.guard';
-import { NewUserSwagger } from '../swagger/new-user.swagger';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { UserIdParam } from '../../CommonsModule/guard/student-metadata.guard';
-import { StudentGuard } from '../../CommonsModule/guard/student.guard';
-import { PhotoDTO } from '../dto/photo.dto';
-import { AppConfigService as ConfigService } from '../../ConfigModule/service/app-config.service';
-import { Response } from 'express';
+import {
+  NeedPolicies,
+  NeedRoles,
+} from '../../CommonsModule/decorator/role-guard-metadata.decorator';
 
 @ApiTags('User')
 @ApiBearerAuth()
@@ -66,7 +53,6 @@ export class UserController {
     private readonly mapper: UserMapper,
     @Inject(forwardRef(() => SecurityService))
     private readonly securityService: SecurityService,
-    private readonly configService: ConfigService,
   ) {}
 
   @Get()
@@ -77,59 +63,11 @@ export class UserController {
     description:
       'thrown if there is not an authorization token or if authorization token does not have ADMIN role',
   })
-  @NeedRole(RoleEnum.ADMIN)
+  @NeedRoles(RoleEnum.ADMIN)
+  @NeedPolicies(`${Constants.POLICY_PREFIX}/GET_ALL_USERS`)
   @UseGuards(RoleGuard)
   public async getAll(): Promise<UserDTO[]> {
     return this.mapper.toDtoList(await this.service.getAll());
-  }
-
-  @Get('/me')
-  @HttpCode(200)
-  @ApiOkResponse({ type: UserDTO })
-  @ApiOperation({
-    summary: 'Find user by jwt id',
-    description: 'Decodes de jwt and finds the user by the jwt id',
-  })
-  @ApiNotFoundResponse({ description: 'thrown if user is not found' })
-  @ApiUnauthorizedResponse({
-    description:
-      'thrown if there is not an authorization token or if authorization token does not have ADMIN or STUDENT role',
-  })
-  @NeedRole(RoleEnum.ADMIN, RoleEnum.STUDENT)
-  @UseGuards(RoleGuard)
-  public async findUserByJwtId(
-    @Headers('authorization') authorization: string,
-  ): Promise<UserDTO> {
-    const { id }: User = this.securityService.getUserFromToken(
-      authorization.split(' ')[1],
-      this.configService.jwtSecret,
-    );
-    this.logger.log(`user id: ${id}`);
-    return this.mapper.toDtoAsync(await this.service.findById(id));
-  }
-
-  @Get(':id/photo')
-  @HttpCode(200)
-  @UserIdParam('id')
-  @UseGuards(StudentGuard)
-  @NeedRole(RoleEnum.ADMIN, RoleEnum.STUDENT)
-  @UseGuards(RoleGuard)
-  public async getUserPhoto(@Param('id') id: string): Promise<PhotoDTO> {
-    return { photo: await this.service.getUserPhoto(id) };
-  }
-
-  @Post(':id/photo')
-  @UseInterceptors(FileInterceptor('file'))
-  @HttpCode(200)
-  @UserIdParam('id')
-  @UseGuards(StudentGuard)
-  @NeedRole(RoleEnum.STUDENT)
-  @UseGuards(RoleGuard)
-  public async uploadUserPhoto(
-    @UploadedFile('file') file: Express.Multer.File,
-    @Param('id') id: string,
-  ): Promise<void> {
-    return this.service.uploadUserPhoto(file, id);
   }
 
   @Get(':id')
@@ -147,12 +85,12 @@ export class UserController {
     description:
       'thrown if there is not an authorization token or if authorization token does not have ADMIN role',
   })
-  @NeedRole(
-    RoleEnum.ADMIN,
-    RoleEnum.STUDENT,
-    '@AUTHORIZATION-RESOURCE-SERVER/GET-USER',
-  )
   @UseGuards(RoleGuard)
+  @NeedRoles(RoleEnum.ADMIN)
+  @NeedPolicies(
+    '@AUTHORIZATION-RESOURCE-SERVER/GET-USER',
+    `${Constants.POLICY_PREFIX}/GET_ALL_USERS`,
+  )
   public async findById(@Param('id') id: UserDTO['id']): Promise<UserDTO> {
     this.logger.log(`user id: ${id}`);
     return this.mapper.toDtoAsync(await this.service.findById(id));
@@ -160,45 +98,18 @@ export class UserController {
 
   @Post()
   @HttpCode(201)
-  @ApiCreatedResponse({ type: NewUserSwagger, description: 'User created' })
   @ApiOperation({ summary: 'Add user', description: 'Creates a new user' })
   @ApiBody({ type: NewUserDTO })
   @ApiUnauthorizedResponse({
     description:
       'thrown if there is not an authorization token or if authorization token does not have ADMIN role',
   })
-  @NeedRole(RoleEnum.ADMIN)
   @UseGuards(RoleGuard)
+  @NeedRoles(RoleEnum.ADMIN)
+  @NeedPolicies(`${Constants.POLICY_PREFIX}/CREATE_USER`)
   public async add(@Body() user: NewUserDTO): Promise<UserDTO> {
     this.logger.log(`user: ${user}`);
     return this.mapper.toDto(await this.service.add(user));
-  }
-
-  @Post('/student')
-  @HttpCode(201)
-  @ApiCreatedResponse({ type: NewUserDTO, description: 'User student created' })
-  @ApiOperation({
-    summary: 'Add student user',
-    description: 'Creates a new student',
-  })
-  @ApiBody({ type: NewStudentDTO })
-  @ApiUnauthorizedResponse({
-    description:
-      'thrown if there is not an authorization token or if authorization token does not have EXTERNAL role',
-  })
-  @NeedRole(RoleEnum.ADMIN, RoleEnum.EXTERNAL)
-  @UseGuards(RoleGuard)
-  public async addStudent(
-    @Body() user: NewStudentDTO,
-    @Query('inviteKey') inviteKey?: string,
-  ): Promise<UserDTO> {
-    this.logger.log(`user: ${user}`);
-    return this.mapper.toDto(
-      await this.service.addStudent(
-        { ...user, role: RoleEnum.STUDENT },
-        inviteKey,
-      ),
-    );
   }
 
   @Put(':id')
@@ -216,10 +127,9 @@ export class UserController {
     description:
       'thrown if there is not an authorization token or if authorization token does not have ADMIN role',
   })
-  @UserIdParam('id')
-  @UseGuards(StudentGuard)
-  @NeedRole(RoleEnum.ADMIN, RoleEnum.STUDENT)
   @UseGuards(RoleGuard)
+  @NeedRoles(RoleEnum.ADMIN)
+  @NeedPolicies(`${Constants.POLICY_PREFIX}/UPDATE_USER`)
   public async update(
     @Param('id') id: string,
     @Body() userUpdatedInfo: UserUpdateDTO,
@@ -239,10 +149,9 @@ export class UserController {
   @ApiUnauthorizedResponse({
     description: `throw if there is not an authorization token, if authorization token does not have STUDENT role or if the id param is different from the user id`,
   })
-  @UserIdParam('id')
-  @UseGuards(StudentGuard)
-  @NeedRole(RoleEnum.STUDENT)
   @UseGuards(RoleGuard)
+  @NeedRoles(RoleEnum.ADMIN)
+  @NeedPolicies(`${Constants.POLICY_PREFIX}/CHANGE_USER_PASSWORD`)
   public async changeUserPassword(
     @Param('id') id: string,
     @Body() changePassword: AdminChangePasswordDTO,
@@ -265,8 +174,9 @@ export class UserController {
     description:
       'thrown if there is not an authorization token or if authorization token does not have EXTERNAL role',
   })
-  @NeedRole(RoleEnum.ADMIN, RoleEnum.EXTERNAL)
   @UseGuards(RoleGuard)
+  @NeedRoles(RoleEnum.ADMIN)
+  @NeedPolicies(`${Constants.POLICY_PREFIX}/FORGOT_PASSWORD`)
   public async forgotPassword(
     @Body() forgotPasswordDTO: ForgotPasswordDTO,
   ): Promise<ChangePasswordRequestIdDTO> {
@@ -274,9 +184,7 @@ export class UserController {
     const forgotPasswordRequestId = await this.service.forgotPassword(
       forgotPasswordDTO,
     );
-    const changePasswordRequestIdDTO = new ChangePasswordRequestIdDTO();
-    changePasswordRequestIdDTO.id = forgotPasswordRequestId;
-    return changePasswordRequestIdDTO;
+    return { id: forgotPasswordRequestId };
   }
 
   @Get('/forgot-password/:changePasswordRequestId/validate')
@@ -296,8 +204,11 @@ export class UserController {
     description:
       'thrown if there is not an authorization token or if authorization token does not have EXTERNAL role',
   })
-  @NeedRole(RoleEnum.ADMIN, RoleEnum.EXTERNAL)
   @UseGuards(RoleGuard)
+  @NeedRoles(RoleEnum.ADMIN)
+  @NeedPolicies(
+    `${Constants.POLICY_PREFIX}/VALIDATE_CHANGE_PASSWORD_EXPIRATION_TIME`,
+  )
   public async validateChangePasswordExpirationTime(
     @Param('changePasswordRequestId') changePasswordRequestId: string,
   ): Promise<void> {
@@ -317,7 +228,8 @@ export class UserController {
     description:
       'thrown if there is not an authorization token or if authorization token does not have EXTERNAL role',
   })
-  @NeedRole(RoleEnum.ADMIN, RoleEnum.EXTERNAL)
+  @NeedRoles(RoleEnum.ADMIN, RoleEnum.EXTERNAL)
+  @NeedPolicies(`${Constants.POLICY_PREFIX}/CHANGE_PASSWORD`)
   @UseGuards(RoleGuard)
   public async changePassword(
     @Param('changePasswordRequestId') changePasswordRequestId: string,
@@ -330,62 +242,5 @@ export class UserController {
       changePasswordRequestId,
       changePasswordDTO,
     );
-  }
-
-  @Get(':id/certificate')
-  @HttpCode(200)
-  @ApiOperation({
-    summary: 'Get Certificates',
-    description: 'Get All Certificates',
-  })
-  @ApiOkResponse({
-    type: CertificateUserDTO,
-    isArray: true,
-    description: 'All Certificates',
-  })
-  @ApiUnauthorizedResponse({
-    description:
-      'thrown if there is not an authorization token or if authorization token does not have ADMIN role',
-  })
-  @UserIdParam('id')
-  @UseGuards(StudentGuard)
-  @NeedRole(RoleEnum.ADMIN, RoleEnum.STUDENT)
-  @UseGuards(RoleGuard)
-  public async findCertificatesByUser(
-    @Param('id') id: string,
-  ): Promise<CertificateUserDTO[]> {
-    return await this.service.getCertificateByUser(id);
-  }
-
-  @Get(':id/semear')
-  @UserIdParam('id')
-  @UseGuards(StudentGuard)
-  @NeedRole(RoleEnum.STUDENT)
-  @UseGuards(RoleGuard)
-  public async userAcceptedSemear(
-    @Param('id') id: string,
-  ): Promise<{ accepted: boolean }> {
-    return { accepted: await this.service.userAcceptedSemear(id) };
-  }
-
-  @Post(':id/semear')
-  @UserIdParam('id')
-  @UseGuards(StudentGuard)
-  @NeedRole(RoleEnum.STUDENT)
-  @UseGuards(RoleGuard)
-  public async acceptSemear(@Param('id') id: string): Promise<void> {
-    return await this.service.acceptSemear(id);
-  }
-
-  @Get('semear/students')
-  @UserIdParam('id')
-  @UseGuards(StudentGuard)
-  @NeedRole(RoleEnum.STUDENT)
-  @UseGuards(RoleGuard)
-  public async createSemearStudentsFile(@Res() res: Response) {
-    const file = this.service.createSemearStudentsFile();
-    res.set('Content-Type', 'text/plain');
-    res.write(file);
-    res.end();
   }
 }

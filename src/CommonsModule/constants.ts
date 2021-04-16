@@ -25,4 +25,6 @@ export class Constants {
   static NOTIFICATION_ENDPOINT = 'notification';
   static CITY_ENDPOINT = 'city';
   static STATE_ENDPOINT = 'state';
+
+  static POLICY_PREFIX = '@SECURITY/AUTHORIZATION_RESOURCE_SERVER';
 }

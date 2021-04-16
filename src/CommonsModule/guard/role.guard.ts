@@ -7,9 +7,8 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
-import { User } from '../../UserModule/entity/user.entity';
-import { RoleEnum } from '../../SecurityModule/enum/role.enum';
 import { AppConfigService as ConfigService } from '../../ConfigModule/service/app-config.service';
+import { UserJWTDTO } from '../../SecurityModule/dto/user-jwt.dto';
 
 @Injectable()
 export class RoleGuard implements CanActivate {
@@ -35,9 +34,9 @@ export class RoleGuard implements CanActivate {
     if (!authorizationHeader) return false;
 
     const [, token] = authorizationHeader.split(' ');
-    let user: User;
+    let user: UserJWTDTO;
     try {
-      user = this.jwtService.verify<User>(token, {
+      user = this.jwtService.verify<UserJWTDTO>(token, {
         secret: this.configService.jwtSecret,
       });
     } catch (e) {

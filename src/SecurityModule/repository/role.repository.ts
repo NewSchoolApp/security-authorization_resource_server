@@ -1,10 +1,12 @@
-import { EntityRepository, Repository } from 'typeorm';
-import { Role } from '../entity/role.entity';
-import { RoleEnum } from '../enum/role.enum';
+import { Injectable } from '@nestjs/common';
+import { Role } from '@prisma/client';
+import { PrismaService } from '../../PrismaModule/service/prisma.service';
 
-@EntityRepository(Role)
-export class RoleRepository extends Repository<Role> {
-  public async findByRoleName(name: RoleEnum): Promise<Role> {
-    return this.findOne({ name });
+@Injectable()
+export class RoleRepository {
+  constructor(private readonly prismaService: PrismaService) {}
+
+  public async findByRoleName(name: string): Promise<Role> {
+    return this.prismaService.role.findUnique({ where: { name } });
   }
 }

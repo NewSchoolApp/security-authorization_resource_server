@@ -1,15 +1,17 @@
-import { EntityRepository, Repository } from 'typeorm';
-import { ClientCredentials } from '../entity/client-credentials.entity';
+import { Injectable } from '@nestjs/common';
+import { ClientCredentials } from '@prisma/client';
+import { PrismaService } from '../../PrismaModule/service/prisma.service';
 
-@EntityRepository(ClientCredentials)
-export class ClientCredentialsRepository extends Repository<ClientCredentials> {
-  async findByNameAndSecret(
+@Injectable()
+export class ClientCredentialsRepository {
+  constructor(private readonly prismaService: PrismaService) {}
+
+  public async findByNameAndSecret(
     name: string,
     secret: string,
-  ): Promise<ClientCredentials> {
-    return this.findOne(
-      { name, secret },
-      { relations: ['role', 'role.policies'] },
-    );
+  ): Promise<ClientCredentials | undefined> {
+    return this.prismaService.clientCredentials.findFirst({
+      where: { name, secret },
+    });
   }
 }

@@ -11,14 +11,12 @@ import {
 import { SecurityService } from '../service/security.service';
 import { Constants } from '../../CommonsModule/constants';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { User } from '../../UserModule/entity/user.entity';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { FacebookAuthUserDTO } from '../dto/facebook-auth-user.dto';
 import { AuthDTO } from '../dto/auth.dto';
 import { GrantTypeEnum } from '../enum/grant-type.enum';
 import { GeneratedTokenDTO } from '../dto/generated-token.dto';
 import { GoogleAuthUserDTO } from '../dto/google-auth-user.dto';
-import { ClientCredentials } from '../entity/client-credentials.entity';
 
 @Controller(`/${Constants.OAUTH_ENDPOINT}`)
 @ApiTags('Security')
@@ -93,9 +91,7 @@ export class SecurityController {
 
   @Post('/token/details')
   @ApiBearerAuth()
-  getTokenDetails(
-    @Headers('authorization') authorizationHeader: string,
-  ): ClientCredentials | User {
+  getTokenDetails(@Headers('authorization') authorizationHeader: string) {
     const [, jwt] = authorizationHeader.split(' ');
     this.logger.log(`jwt: ${jwt}`);
     return this.service.decodeToken(jwt);

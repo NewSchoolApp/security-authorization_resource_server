@@ -1,116 +1,33 @@
-import { User } from '../entity/user.entity';
-import {
-  IsDate,
-  IsEnum,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-} from 'class-validator';
-import { Expose, Transform } from 'class-transformer';
-import { RoleEnum } from '../../SecurityModule/enum/role.enum';
-import { GenderEnum } from '../enum/gender.enum';
-import { EscolarityEnum } from '../enum/escolarity.enum';
-import { UserProfileEnum } from '../enum/user-profile.enum';
+import { IsBoolean, IsNotEmpty, IsString } from 'class-validator';
 
 export class UserUpdateDTO {
+  @IsString()
   @IsNotEmpty()
-  @IsString()
-  @Expose()
-  id: User['id'];
+  name: string;
 
+  @IsString()
   @IsNotEmpty()
-  @IsString()
-  @Expose()
-  name: User['name'];
+  username: string;
 
+  @IsString()
   @IsNotEmpty()
-  @IsEnum(UserProfileEnum)
-  @Expose()
-  profile: User['profile'];
+  password: string;
 
-  @IsNotEmpty()
   @IsString()
-  @Expose()
-  email: User['email'];
+  roleName: string;
 
-  @IsOptional()
+  @IsBoolean()
+  enabled = true;
+
   @IsString()
-  @Expose()
-  nickname?: string;
+  email?: string;
 
-  @Transform((date) => date && new Date((date as unknown) as number))
-  @IsOptional()
-  @IsDate()
-  @Expose()
-  birthday?: Date;
-
-  @IsOptional()
-  @IsEnum(GenderEnum)
-  @Expose()
-  gender?: GenderEnum;
-
-  @IsOptional()
-  @IsEnum(EscolarityEnum)
-  @Expose()
-  schooling?: EscolarityEnum;
-
-  @IsOptional()
   @IsString()
-  @Expose()
-  institutionName?: string;
+  facebookId?: string;
 
-  @IsOptional()
   @IsString()
-  @Expose()
-  profession?: string;
+  googleSub?: string;
 
-  @IsOptional()
   @IsString()
-  @Expose()
-  address?: string;
-
-  @IsOptional()
-  @IsString()
-  @Expose()
-  city?: string;
-
-  @IsOptional()
-  @IsString()
-  @Expose()
   phone?: string;
-
-  @IsOptional()
-  @IsString()
-  @Expose()
-  cep?: string;
-
-  @IsOptional()
-  @IsString()
-  @Expose()
-  complement?: string;
-
-  @IsOptional()
-  @IsString()
-  @Expose()
-  houseNumber?: string;
-
-  @IsOptional()
-  @IsString()
-  @Expose()
-  state?: string;
-
-  @IsOptional()
-  @IsString()
-  @Expose()
-  urlFacebook?: User['urlFacebook'];
-
-  @IsOptional()
-  @IsString()
-  @Expose()
-  urlInstagram?: User['urlInstagram'];
-
-  @IsEnum(RoleEnum)
-  @IsOptional()
-  @Expose()
-  role?: RoleEnum;
 }

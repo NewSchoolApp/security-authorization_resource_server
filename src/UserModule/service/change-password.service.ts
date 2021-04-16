@@ -1,8 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ChangePasswordRepository } from '../repository/change-password.repository';
 import { AppConfigService as ConfigService } from '../../ConfigModule/service/app-config.service';
-import { ChangePassword } from '../entity/change-password.entity';
-import { User } from '../entity/user.entity';
 
 @Injectable()
 export class ChangePasswordService {
@@ -11,20 +9,21 @@ export class ChangePasswordService {
     private readonly configService: ConfigService,
   ) {}
 
-  public async createChangePasswordRequest(
-    user: User,
-  ): Promise<ChangePassword> {
-    const changePassword: ChangePassword = new ChangePassword();
-    changePassword.user = user;
-    changePassword.expirationTime = this.configService.changePasswordExpirationTime;
-    return this.repository.save(changePassword);
+  public async createChangePasswordRequest(userId: string) {
+    return this.repository.create({
+      data: {
+        userId,
+        expirationTimeInMilliseconds: this.configService
+          .changePasswordExpirationTime,
+      },
+    });
   }
 
-  public async findById(id: string): Promise<ChangePassword> {
-    const changePassword: ChangePassword = await this.repository.findOne(
-      { id },
-      { relations: ['user'] },
-    );
+  public async findById(id: string) {
+    const changePassword = await this.repository.findUnique({
+      where: { id },
+      include: { User: true },
+    });
     if (!changePassword) {
       throw new NotFoundException();
     }
