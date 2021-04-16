@@ -12,6 +12,13 @@ export class ClientCredentialsRepository {
   ): Promise<ClientCredentials | undefined> {
     return this.prismaService.clientCredentials.findFirst({
       where: { name, secret },
+      include: {
+        Role: {
+          include: {
+            Policies: true,
+          },
+        },
+      },
     });
   }
 }

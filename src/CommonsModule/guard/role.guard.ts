@@ -8,7 +8,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { AppConfigService as ConfigService } from '../../ConfigModule/service/app-config.service';
-import { UserJWTDTO } from '../../SecurityModule/dto/user-jwt.dto';
+import { UserJWTDTO } from "../dto/user-jwt.dto";
 
 @Injectable()
 export class RoleGuard implements CanActivate {
