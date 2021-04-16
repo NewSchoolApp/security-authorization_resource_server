@@ -1,0 +1,70 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model ChangePassword {
+  id                           String   @id @default(uuid())
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+  expirationTimeInMilliseconds Int
+  userId                       String
+
+  User User @relation(fields: [userId], references: [id])
+}
+
+model Policy {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  Role Role[]
+}
+
+model Role {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  name      String   @unique
+
+  Policies          Policy[]
+  ClientCredentials ClientCredentials[]
+  Users             User[]
+}
+
+model User {
+  id             String           @id @default(uuid())
+  name           String
+  username       String           @unique
+  password       String
+  roleId         String
+  enabled        Boolean
+  phone          String?
+  email          String?
+  facebookId     String?          @map("facebook_id")
+  googleSub      String?          @map("google_sub")
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  ChangePassword ChangePassword[]
+
+  Role Role @relation(fields: [roleId], references: [id])
+}
+
+model ClientCredentials {
+  id                   String   @id @default(uuid())
+  name                 String   @unique
+  secret               String
+  accessTokenValidity  Int      @map("access_token_validity")
+  authorizedGrantTypes String   @map("authorized_grant_types")
+  refreshTokenValidity Int?     @map("refresh_token_validity")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  roleId               String?
+
+  Role Role? @relation(fields: [roleId], references: [id])
+}

@@ -93,35 +93,6 @@ export class AppConfigService {
     };
   }
 
-  public getDatabaseConfig(): MysqlConnectionOptions {
-    return {
-      type: 'mysql',
-      multipleStatements: true,
-      entities: [
-        `${path.resolve(
-          path.join(__dirname, '..', '..'),
-        )}/**/*.entity{.ts,.js}`,
-      ],
-      migrationsRun: this.runMigrations,
-      migrations: [
-        `${path.resolve(
-          path.join(__dirname, '..', '..'),
-        )}/migration/*{.ts,.js}`,
-      ],
-      migrationsTableName: 'migration',
-      cli: {
-        migrationsDir: 'src/migration',
-      },
-      host: this.databaseHost,
-      database: this.databaseName,
-      port: this.databasePort,
-      username: this.databaseUsername,
-      password: this.databasePassword,
-      synchronize: this.synchronize || false,
-      logging: this.logging,
-    };
-  }
-
   getAwsConfiguration(): S3.Types.ClientConfiguration {
     return {
       accessKeyId: this.awsAccessKey,

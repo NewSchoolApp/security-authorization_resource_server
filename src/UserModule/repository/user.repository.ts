@@ -1,64 +1,53 @@
-import { createQueryBuilder, EntityRepository, Repository } from 'typeorm';
-import { User } from '../entity/user.entity';
+import { Injectable } from '@nestjs/common';
+import { User, Prisma } from '@prisma/client';
+import { PrismaService } from '../../PrismaModule/service/prisma.service';
 
-@EntityRepository(User)
-export class UserRepository extends Repository<User> {
-  async findByEmail(email: string): Promise<User | undefined> {
-    return this.findOne({ email }, { relations: ['role', 'role.policies'] });
+@Injectable()
+export class UserRepository {
+  constructor(private readonly prismaService: PrismaService) {}
+
+  public findMany(args?: Prisma.UserFindManyArgs) {
+    return this.prismaService.user.findMany(args);
   }
 
-  async findByIdWithCertificates(id: string): Promise<User | undefined> {
-    return this.findOneOrFail(id, { relations: ['certificates'] });
+  public findUnique(args?: Prisma.UserFindUniqueArgs) {
+    return this.prismaService.user.findUnique(args);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public async getCertificateByUser(userId: string): Promise<any[]> {
-    return createQueryBuilder('user', 'user')
-      .innerJoinAndSelect(
-        'certificate_users_user',
-        'certificate_user',
-        'certificate_user.userId = user.id',
-      )
-      .innerJoinAndSelect(
-        'certificate',
-        'certificate',
-        'certificate.id = certificate_user.certificateId',
-      )
-      .where('user.id = :userId', { userId })
-      .getRawMany();
+  public findFirst(args?: Prisma.UserFindFirstArgs) {
+    return this.prismaService.user.findFirst(args);
   }
 
-  async findByIdWithCourses(id: string): Promise<User | undefined> {
-    return this.findOneOrFail(id, { relations: ['createdCourses'] });
+  public create(args: Prisma.UserCreateArgs) {
+    return this.prismaService.user.create(args);
   }
 
-  async findByEmailAndFacebookId(
+  public update(args: Prisma.UserUpdateArgs) {
+    return this.prismaService.user.update(args);
+  }
+
+  public delete(args: Prisma.UserDeleteArgs) {
+    return this.prismaService.user.delete(args);
+  }
+
+  public findById(id: string) {
+    return this.prismaService.user.findUnique({
+      where: { id },
+      include: { Role: { include: { Policies: true } } },
+    });
+  }
+
+  public async findByUsername(username: string) {
+    return this.prismaService.user.findUnique({
+      where: { username },
+      include: { Role: { include: { Policies: true } } },
+    });
+  }
+
+  public async findByEmailAndFacebookId(
     email: string,
     facebookId: string,
   ): Promise<User> {
-    return this.findOne({ email, facebookId });
-  }
-
-  getUsersQuantity(): Promise<number> {
-    return this.count();
-  }
-
-  // #TODO: Criar lógica de usuários ativos
-  getActiveUsersQuantity(): Promise<number> {
-    return this.count();
-  }
-
-  // #TODO: Criar lógica de usuários inativos
-  getInactiveUsersQuantity(): Promise<number> {
-    return this.count();
-  }
-
-  async findByInviteKey(inviteKey: string): Promise<User> {
-    const response = await this.find({ where: { inviteKey } });
-    return response[0];
-  }
-
-  public async countUsersInvitedByUserId(id: string): Promise<number> {
-    return this.count({ where: { invitedByUserId: { id } } });
+    return this.prismaService.user.findFirst({ where: { email, facebookId } });
   }
 }

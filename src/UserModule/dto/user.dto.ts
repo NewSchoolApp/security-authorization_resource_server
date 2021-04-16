@@ -1,130 +1,38 @@
-import { User } from '../entity/user.entity';
-import { Expose, Transform, Type } from 'class-transformer';
+import { IsBoolean, IsNotEmpty, IsString } from 'class-validator';
+import { Expose, Type } from 'class-transformer';
 import { RoleDTO } from '../../SecurityModule/dto/role.dto';
-import {
-  IsDate,
-  IsEnum,
-  IsNotEmpty,
-  IsNumber,
-  IsOptional,
-  IsString,
-} from 'class-validator';
-import { GenderEnum } from '../enum/gender.enum';
-import { EscolarityEnum } from '../enum/escolarity.enum';
-import { UserProfileEnum } from '../enum/user-profile.enum';
 
 export class UserDTO {
   @IsNotEmpty()
   @IsString()
   @Expose()
-  id: User['id'];
+  id: string;
 
   @IsNotEmpty()
   @IsString()
   @Expose()
-  name: User['name'];
+  name: string;
 
   @IsNotEmpty()
   @IsString()
   @Expose()
-  email: User['email'];
+  username: string;
 
   @IsNotEmpty()
-  @IsEnum(UserProfileEnum)
+  @IsBoolean()
   @Expose()
-  profile: User['profile'];
-
-  @IsNotEmpty()
-  @IsString()
-  @Expose()
-  nickname?: string;
-
-  @Transform((date) => date && new Date((date as unknown) as number))
-  @IsNotEmpty()
-  @IsDate()
-  @Expose()
-  birthday?: Date;
-
-  @IsNotEmpty()
-  @IsEnum(GenderEnum)
-  @Expose()
-  gender?: GenderEnum;
-
-  @IsOptional()
-  @IsNumber()
-  @Expose()
-  inviteKey: string;
-
-  @IsOptional()
-  @IsNumber()
-  @Expose()
-  invitedByUserId: string;
-
-  @IsNotEmpty()
-  @IsEnum(EscolarityEnum)
-  @Expose()
-  schooling?: EscolarityEnum;
-
-  @IsNotEmpty()
-  @IsString()
-  @Expose()
-  institutionName?: string;
-
-  @IsNotEmpty()
-  @IsString()
-  @Expose()
-  profession?: string;
-
-  @IsNotEmpty()
-  @IsString()
-  @Expose()
-  phone?: string;
-
-  @IsNotEmpty()
-  @IsString()
-  @Expose()
-  cep?: string;
-
-  @IsNotEmpty()
-  @IsString()
-  @Expose()
-  complement?: string;
-
-  @IsNotEmpty()
-  @IsString()
-  @Expose()
-  houseNumber?: string;
-
-  @IsNotEmpty()
-  @IsString()
-  @Expose()
-  address?: string;
-
-  @IsNotEmpty()
-  @IsString()
-  @Expose()
-  city?: string;
-
-  @IsNotEmpty()
-  @IsString()
-  @Expose()
-  state?: string;
-
-  @IsOptional()
-  @IsString()
-  @Expose()
-  urlFacebook?: User['urlFacebook'];
-
-  @IsOptional()
-  @IsString()
-  @Expose()
-  urlInstagram?: User['urlInstagram'];
+  enabled: boolean;
 
   @Type(() => RoleDTO)
   @IsNotEmpty()
   @Expose()
-  role: RoleDTO;
+  Role: RoleDTO;
 
+  @IsString()
   @Expose()
-  photo: string;
+  phone?: string;
+
+  @IsString()
+  @Expose()
+  email?: string;
 }

@@ -7,5 +7,5 @@ export class FacebookAuthUserDTO {
 
   @IsNotEmpty()
   @IsString()
-  email: string;
+  username: string;
 }

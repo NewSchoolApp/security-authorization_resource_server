@@ -1,106 +1,62 @@
 import * as crypto from 'crypto';
-import * as path from 'path';
-import exportFromJSON from 'export-from-json';
 import {
   BadRequestException,
   ConflictException,
   GoneException,
-  HttpService,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { CertificateUserDTO } from '../dto/certificate-user.dto';
-
 import { ChangePasswordService } from './change-password.service';
 import { MailerService } from '@nest-modules/mailer';
 import { RoleService } from '../../SecurityModule/service/role.service';
-import { Role } from '../../SecurityModule/entity/role.entity';
 import { AppConfigService as ConfigService } from '../../ConfigModule/service/app-config.service';
-import { ChangePassword } from '../entity/change-password.entity';
 import { AdminChangePasswordDTO } from '../dto/admin-change-password.dto';
 import { UserRepository } from '../repository/user.repository';
-import { User } from '../entity/user.entity';
 import { ForgotPasswordDTO } from '../dto/forgot-password';
 import { ChangePasswordForgotFlowDTO } from '../dto/change-password-forgot-flow.dto';
 import { UserNotFoundError } from '../../SecurityModule/exception/user-not-found.error';
 import { NewUserDTO } from '../dto/new-user.dto';
 import { UserUpdateDTO } from '../dto/user-update.dto';
 import { ChangePasswordDTO } from '../dto/change-password.dto';
-import { UploadService } from '../../UploadModule/service/upload.service';
-import { RoleEnum } from '../../SecurityModule/enum/role.enum';
-import { v4 as uuidv4 } from 'uuid';
-import { UserMapper } from '../mapper/user.mapper';
-import { UserDTO } from '../dto/user.dto';
+import { User } from '@prisma/client';
+import SecurePassword from 'secure-password';
+import { SecurityService } from '../../SecurityModule/service/security.service';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const securePassword = require('secure-password');
 
 @Injectable()
 export class UserService {
   constructor(
     private readonly repository: UserRepository,
-    private readonly http: HttpService,
     private readonly changePasswordService: ChangePasswordService,
     private readonly mailerService: MailerService,
     private readonly configService: ConfigService,
     private readonly roleService: RoleService,
-    private readonly uploadService: UploadService,
-    private readonly mapper: UserMapper,
   ) {}
 
   public async getAll(): Promise<User[]> {
-    return this.repository.find();
+    return this.repository.findMany();
   }
 
-  public async findById(id: string): Promise<User> {
-    const response: User[] = await this.repository.find({
-      where: { id },
-      relations: ['role', 'role.policies'],
-    });
-    const user = response[0];
+  public async findById(id: string) {
+    const user = await this.repository.findById(id);
     if (!user) {
       throw new NotFoundException('User not found');
     }
     return user;
   }
 
-  public async getCertificateByUser(
-    userId: string,
-  ): Promise<CertificateUserDTO[]> {
-    const certificates = await this.repository.getCertificateByUser(userId);
-
-    return certificates.map<CertificateUserDTO>((certificate) => {
-      const c = new CertificateUserDTO();
-      c.id = certificate.certificate_id;
-      c.title = certificate.certificate_title;
-      c.userName = certificate.user_name;
-      c.text = certificate.certificate_text;
-      c.certificateBackgroundName =
-        certificate.certificate_certificateBackgroundName;
-      return c;
-    });
-  }
-
-  public async addStudent(user: NewUserDTO, inviteKey: string): Promise<User> {
-    let invitedByUserId: string | null;
-    if (inviteKey) {
-      const invitedByUser: User = await this.repository.findByInviteKey(
-        inviteKey,
-      );
-      invitedByUserId = invitedByUser ? invitedByUser.id : null;
-    }
-    return await this.add({ ...user, invitedByUserId });
-  }
-
-  public async add(user: NewUserDTO): Promise<User> {
-    const role: Role = await this.roleService.findByRoleName(user.role);
-    const salt: string = this.createSalt();
-    const hashPassword: string = this.createHashedPassword(user.password, salt);
+  public async add(user: NewUserDTO) {
+    const role = await this.roleService.findByRoleName(user.roleName);
+    const hashPassword: string = await this.createHashedPassword(user.password);
     try {
-      return await this.repository.save({
-        ...user,
-        salt,
-        password: hashPassword,
-        inviteKey: `${this.generateInviteKey()}${this.generateInviteKey()}`,
-        role,
+      return await this.repository.create({
+        data: {
+          ...user,
+          password: hashPassword,
+          roleId: role.id,
+        },
       });
     } catch (e) {
       if (e.code === 'ER_DUP_ENTRY') {
@@ -110,67 +66,57 @@ export class UserService {
     }
   }
 
-  public async delete(id: User['id']): Promise<void> {
-    await this.findById(id);
-    await this.repository.delete(id);
+  public async delete(id: string): Promise<void> {
+    await this.repository.delete({ where: { id } });
   }
 
   public async update(
-    id: User['id'],
+    id: string,
     userUpdatedInfo: UserUpdateDTO,
   ): Promise<User> {
-    const user: User = await this.findById(id);
-    let role = user.role;
-    if (userUpdatedInfo.role) {
-      role = await this.roleService.findByRoleName(userUpdatedInfo.role);
-    }
-    const updatedUser = await this.repository.save({
-      ...user,
-      ...userUpdatedInfo,
-      role,
-      id: user.id,
+    return await this.repository.update({
+      where: {
+        id,
+      },
+      data: {
+        ...userUpdatedInfo,
+      },
     });
-    return updatedUser;
   }
 
-  public async forgotPassword(
-    forgotPasswordDTO: ForgotPasswordDTO,
-  ): Promise<string> {
-    const user: User = await this.findByEmail(forgotPasswordDTO.email);
-    const changePassword: ChangePassword = await this.changePasswordService.createChangePasswordRequest(
-      user,
+  public async hashUserPassword(user: User, password: string) {
+    const pwd: SecurePassword = securePassword();
+    const hashBuffer = await pwd.hash(Buffer.from(password));
+    return this.repository.update({
+      where: {
+        id: user.id,
+      },
+      data: {
+        password: hashBuffer.toString(),
+      },
+      include: {
+        Role: {
+          include: {
+            Policies: true,
+          },
+        },
+      },
+    });
+  }
+
+  public async forgotPassword({
+    username,
+  }: ForgotPasswordDTO): Promise<string> {
+    const user = await this.findByUsername(username);
+    const changePassword = await this.changePasswordService.createChangePasswordRequest(
+      user.id,
     );
     await this.sendChangePasswordEmail(user, changePassword.id);
     return changePassword.id;
   }
 
-  public async findByEmail(email: string): Promise<User> {
-    const user: User = await this.repository.findByEmail(email);
-    if (!user) {
-      throw new UserNotFoundError();
-    }
-    return user;
-  }
-
-  public async findByEmailAndPassword(
-    email: string,
-    password: string,
-  ): Promise<User> {
-    const user: User = await this.findByEmail(email);
-    if (!user.validPassword(password)) {
-      throw new UserNotFoundError();
-    }
-    return user;
-  }
-
-  public async findByEmailAndFacebookId(
-    email: string,
-    facebookId: string,
-  ): Promise<User> {
-    const user: User = await this.repository.findByEmailAndFacebookId(
-      email,
-      facebookId,
-    );
+  public async findByUsername(username: string) {
+    const user = await this.repository.findByUsername(username);
     if (!user) {
       throw new UserNotFoundError();
     }
@@ -180,13 +126,13 @@ export class UserService {
   public async validateChangePassword(
     changePasswordRequestId: string,
   ): Promise<void> {
-    const changePassword: ChangePassword = await this.changePasswordService.findById(
+    const changePassword = await this.changePasswordService.findById(
       changePasswordRequestId,
     );
     if (
       Date.now() >
       new Date(changePassword.createdAt).getTime() +
-        changePassword.expirationTime
+        changePassword.expirationTimeInMilliseconds
     ) {
       throw new GoneException();
     }
@@ -199,20 +145,20 @@ export class UserService {
     if (changePasswordDTO.newPassword !== changePasswordDTO.confirmNewPassword)
       throw new BadRequestException('New passwords are not the same');
     const user: User = await this.findById(id);
-    const oldPassword = this.createHashedPassword(
-      changePasswordDTO.oldPassword,
-      user.salt,
+    const pwd: SecurePassword = securePassword();
+    const result = pwd.verify(
+      Buffer.from(changePasswordDTO.oldPassword),
+      Buffer.from(user.password),
     );
-    if (oldPassword !== user.password)
+    if (result === securePassword.INVALID) {
       throw new BadRequestException(
         'Old password does not match with current password',
       );
-    user.salt = this.createSalt();
-    user.password = this.createHashedPassword(
+    }
+    user.password = await this.createHashedPassword(
       changePasswordDTO.newPassword,
-      user.salt,
     );
-    return await this.repository.save(user);
+    return await this.repository.create({ data: user });
   }
 
   public async changePassword(
@@ -224,18 +170,29 @@ export class UserService {
     ) {
       throw new BadRequestException('New passwords does not match');
     }
-    const user: User = await this.findById(id);
-    if (!user.validPassword(changePasswordDTO.password)) {
+    const user = await this.findById(id);
+    const result = await SecurityService.validPassword(
+      user.password,
+      changePasswordDTO.password,
+    );
+    if (result === securePassword.INVALID) {
       throw new BadRequestException(
         'Old password does not match with given password',
       );
     }
-    user.salt = this.createSalt();
-    user.password = this.createHashedPassword(
+    user.password = await this.createHashedPassword(
       changePasswordDTO.newPassword,
-      user.salt,
     );
-    return await this.repository.save(user);
+    return await this.repository.update({
+      where: {
+        id: user.id,
+      },
+      data: {
+        password: await this.createHashedPassword(
+          changePasswordDTO.newPassword,
+        ),
+      },
+    });
   }
 
   public async changePasswordForgotPasswordFlow(
@@ -247,48 +204,23 @@ export class UserService {
     ) {
       throw new BadRequestException('passwords does not match');
     }
-    const { user }: ChangePassword = await this.changePasswordService.findById(
+    const changePasswordRequest = await this.changePasswordService.findById(
       changePasswordRequestId,
     );
-    user.salt = this.createSalt();
-    user.password = this.createHashedPassword(
-      changePasswordDTO.newPassword,
-      user.salt,
-    );
-    return await this.repository.save(user);
+    return await this.repository.update({
+      where: { id: changePasswordRequest.userId },
+      data: {
+        password: await this.createHashedPassword(
+          changePasswordDTO.newPassword,
+        ),
+      },
+    });
   }
 
-  async uploadUserPhoto(
-    file: Express.Multer.File,
-    userId: string,
-  ): Promise<void> {
-    const acceptedFileExtensions = ['.png', '.jpg', '.jpeg'];
-    const fileExtension = path.extname(file.originalname);
-
-    if (!acceptedFileExtensions.includes(fileExtension)) {
-      throw new BadRequestException(
-        `Accepted file types are ${acceptedFileExtensions.join(
-          ',',
-        )}, you upload a ${fileExtension} file`,
-      );
-    }
-
-    const user: User = await this.findById(userId);
-
-    const photoPath = `${user.id}/avatar.jpg`;
-
-    await this.uploadService.uploadUserPhoto(photoPath, file.buffer);
-    await this.repository.save({ ...user, photoPath });
-  }
-
-  private createSalt(): string {
-    return crypto.randomBytes(16).toString('hex');
-  }
-
-  private createHashedPassword(password: string, salt: string): string {
-    return crypto
-      .pbkdf2Sync(password, salt, 1000, 64, `sha512`)
-      .toString(`hex`);
+  private async createHashedPassword(password: string): Promise<string> {
+    const pwd: SecurePassword = securePassword();
+    const hashedPassword = await pwd.hash(Buffer.from(password));
+    return hashedPassword.toString();
   }
 
   private async sendChangePasswordEmail(
@@ -311,43 +243,5 @@ export class UserService {
     } catch (e) {
       throw new InternalServerErrorException(e);
     }
-  }
-
-  public async getUserPhoto(id: string): Promise<string> {
-    const user = await this.findById(id);
-    return this.uploadService.getUserPhoto(user.photoPath);
-  }
-
-  public async acceptSemear(id: string): Promise<void> {
-    const filePath = `semear/${id}.json`;
-    const user: User = await this.findById(id);
-    const fileExists = await this.uploadService.fileExists(filePath);
-    if (fileExists) return;
-    await this.uploadService.uploadDataToS3(filePath, user);
-  }
-
-  public async userAcceptedSemear(id: string): Promise<boolean> {
-    const filePath = `semear/${id}.json`;
-    return await this.uploadService.fileExists(filePath);
-  }
-
-  private generateInviteKey(): string {
-    return Math.random().toString(36).substr(2, 20);
-  }
-
-  public async createSemearStudentsFile() {
-    const data = await this.uploadService.getFilesInsideFolder('semear');
-    let students = [];
-    for (const content of data.Contents) {
-      const filedata = await this.uploadService.getFile(content.Key);
-      const json = JSON.parse(filedata.Body.toString('utf-8'));
-      students = [...students, json];
-    }
-    return exportFromJSON({
-      data: students,
-      fileName: 'estudantes',
-      exportType: 'json',
-      withBOM: true,
-    });
   }
 }

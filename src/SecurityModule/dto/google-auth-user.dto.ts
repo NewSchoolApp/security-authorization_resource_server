@@ -7,5 +7,5 @@ export class GoogleAuthUserDTO {
 
   @IsNotEmpty()
   @IsString()
-  email: string;
+  username: string;
 }
