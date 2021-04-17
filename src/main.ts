@@ -5,6 +5,7 @@ import { AppConfigService as ConfigService } from './ConfigModule/service/app-co
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.enableCors();
   const options = new DocumentBuilder()
     .setTitle('@Security/Authorization-Resource-Server')
     .setDescription('Authorization e Resource Server da NewSchool')
