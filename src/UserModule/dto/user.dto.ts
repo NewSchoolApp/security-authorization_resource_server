@@ -27,12 +27,4 @@ export class UserDTO {
   @IsNotEmpty()
   @Expose()
   Role: RoleDTO;
-
-  @IsString()
-  @Expose()
-  phone?: string;
-
-  @IsString()
-  @Expose()
-  email?: string;
 }

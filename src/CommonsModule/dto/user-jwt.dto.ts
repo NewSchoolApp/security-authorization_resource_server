@@ -11,9 +11,6 @@ export class RoleJWTDTO {
   @Expose()
   id: string;
 
-  @Expose()
-  name: string;
-
   @Type(() => PolicyJWTDTO)
   @IsNotEmpty()
   @Expose()

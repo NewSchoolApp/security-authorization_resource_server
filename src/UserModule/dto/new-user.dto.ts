@@ -20,14 +20,8 @@ export class NewUserDTO {
   enabled = true;
 
   @IsString()
-  email?: string;
-
-  @IsString()
   facebookId?: string;
 
   @IsString()
   googleSub?: string;
-
-  @IsString()
-  phone?: string;
 }

@@ -3,10 +3,6 @@ import { IsBoolean, IsNotEmpty, IsString } from 'class-validator';
 export class UserUpdateDTO {
   @IsString()
   @IsNotEmpty()
-  name: string;
-
-  @IsString()
-  @IsNotEmpty()
   username: string;
 
   @IsString()

@@ -8,4 +8,9 @@ export class ErrorObject {
     this.message = message;
     this.errorCode = errorCode;
   }
+
+  public customMessage(customMessage: string) {
+    this.message = customMessage;
+    return this;
+  }
 }

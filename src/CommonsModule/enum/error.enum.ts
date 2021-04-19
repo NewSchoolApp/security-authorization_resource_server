@@ -1,7 +1,11 @@
 export const ErrorEnum = {
   USER_NOT_FOUND: {
-    message: 'Usuário não encontrado',
+    message: 'User not found',
     errorCode: 'USER_NOT_FOUND',
+  },
+  ROLE_NOT_FOUND: {
+    message: 'Role not found',
+    errorCode: 'ROLE_NOT_FOUND',
   },
 };
 

@@ -22,6 +22,7 @@ import { ChangePasswordDTO } from '../dto/change-password.dto';
 import { User } from '@prisma/client';
 import SecurePassword from 'secure-password';
 import { SecurityService } from '../../SecurityModule/service/security.service';
+import { ErrorObject } from '../../CommonsModule/dto/error-object.dto';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const securePassword = require('secure-password');
 
@@ -42,7 +43,7 @@ export class UserService {
   public async findById(id: string) {
     const user = await this.repository.findById(id);
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException(new ErrorObject('USER_NOT_FOUND'));
     }
     return user;
   }
