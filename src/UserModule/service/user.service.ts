@@ -51,10 +51,11 @@ export class UserService {
   public async add(user: NewUserDTO) {
     const role = await this.roleService.findByRoleName(user.roleName);
     const hashPassword: string = await this.createHashedPassword(user.password);
+    const { roleName, ...rest } = user;
     try {
       return await this.repository.create({
         data: {
-          ...user,
+          ...rest,
           password: hashPassword,
           roleId: role.id,
         },
