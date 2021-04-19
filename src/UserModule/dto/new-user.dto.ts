@@ -16,6 +16,9 @@ export class NewUserDTO {
   enabled = true;
 
   @IsString()
+  id?: string;
+
+  @IsString()
   facebookId?: string;
 
   @IsString()
