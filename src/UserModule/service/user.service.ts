@@ -107,12 +107,14 @@ export class UserService {
 
   public async forgotPassword({
     username,
+    email,
+    name,
   }: ForgotPasswordDTO): Promise<string> {
     const user = await this.findByUsername(username);
     const changePassword = await this.changePasswordService.createChangePasswordRequest(
       user.id,
     );
-    await this.sendChangePasswordEmail(user, changePassword.id);
+    await this.sendChangePasswordEmail({ email, name }, changePassword.id);
     return changePassword.id;
   }
 
@@ -225,17 +227,17 @@ export class UserService {
   }
 
   private async sendChangePasswordEmail(
-    user: User,
+    { email, name }: { email; name },
     changePasswordRequestId: string,
   ): Promise<void> {
     try {
       await this.mailerService.sendMail({
-        to: user.email,
+        to: email,
         from: this.configService.smtpFrom,
         subject: 'Troca de senha',
         template: 'change-password',
         context: {
-          name: user.name,
+          name: name,
           urlTrocaSenha: this.configService.getChangePasswordFrontUrl(
             changePasswordRequestId,
           ),
