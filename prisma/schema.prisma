@@ -39,13 +39,10 @@ model Role {
 
 model User {
   id             String           @id @default(uuid())
-  name           String
   username       String           @unique
   password       String
   roleId         String
-  enabled        Boolean
-  phone          String?
-  email          String?
+  enabled        Boolean          @default(true)
   facebookId     String?          @map("facebook_id")
   googleSub      String?          @map("google_sub")
   createdAt      DateTime         @default(now())

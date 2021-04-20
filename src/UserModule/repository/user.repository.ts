@@ -43,11 +43,4 @@ export class UserRepository {
       include: { Role: { include: { Policies: true } } },
     });
   }
-
-  public async findByEmailAndFacebookId(
-    email: string,
-    facebookId: string,
-  ): Promise<User> {
-    return this.prismaService.user.findFirst({ where: { email, facebookId } });
-  }
 }

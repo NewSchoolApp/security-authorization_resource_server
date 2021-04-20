@@ -22,6 +22,7 @@ import { ChangePasswordDTO } from '../dto/change-password.dto';
 import { User } from '@prisma/client';
 import SecurePassword from 'secure-password';
 import { SecurityService } from '../../SecurityModule/service/security.service';
+import { ErrorObject } from '../../CommonsModule/dto/error-object.dto';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const securePassword = require('secure-password');
 
@@ -42,7 +43,7 @@ export class UserService {
   public async findById(id: string) {
     const user = await this.repository.findById(id);
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException(new ErrorObject('USER_NOT_FOUND'));
     }
     return user;
   }
@@ -50,10 +51,11 @@ export class UserService {
   public async add(user: NewUserDTO) {
     const role = await this.roleService.findByRoleName(user.roleName);
     const hashPassword: string = await this.createHashedPassword(user.password);
+    const { roleName, ...rest } = user;
     try {
       return await this.repository.create({
         data: {
-          ...user,
+          ...rest,
           password: hashPassword,
           roleId: role.id,
         },
@@ -106,12 +108,14 @@ export class UserService {
 
   public async forgotPassword({
     username,
+    email,
+    name,
   }: ForgotPasswordDTO): Promise<string> {
     const user = await this.findByUsername(username);
     const changePassword = await this.changePasswordService.createChangePasswordRequest(
       user.id,
     );
-    await this.sendChangePasswordEmail(user, changePassword.id);
+    await this.sendChangePasswordEmail({ email, name }, changePassword.id);
     return changePassword.id;
   }
 
@@ -224,17 +228,17 @@ export class UserService {
   }
 
   private async sendChangePasswordEmail(
-    user: User,
+    { email, name }: { email; name },
     changePasswordRequestId: string,
   ): Promise<void> {
     try {
       await this.mailerService.sendMail({
-        to: user.email,
+        to: email,
         from: this.configService.smtpFrom,
         subject: 'Troca de senha',
         template: 'change-password',
         context: {
-          name: user.name,
+          name: name,
           urlTrocaSenha: this.configService.getChangePasswordFrontUrl(
             changePasswordRequestId,
           ),

@@ -3,10 +3,6 @@ import { IsBoolean, IsNotEmpty, IsString } from 'class-validator';
 export class NewUserDTO {
   @IsString()
   @IsNotEmpty()
-  name: string;
-
-  @IsString()
-  @IsNotEmpty()
   username: string;
 
   @IsString()
@@ -20,14 +16,11 @@ export class NewUserDTO {
   enabled = true;
 
   @IsString()
-  email?: string;
+  id?: string;
 
   @IsString()
   facebookId?: string;
 
   @IsString()
   googleSub?: string;
-
-  @IsString()
-  phone?: string;
 }

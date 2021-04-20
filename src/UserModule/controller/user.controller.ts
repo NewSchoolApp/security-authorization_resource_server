@@ -108,7 +108,7 @@ export class UserController {
   @NeedRoles(RoleEnum.ADMIN)
   @NeedPolicies(`${Constants.POLICY_PREFIX}/CREATE_USER`)
   public async add(@Body() user: NewUserDTO): Promise<UserDTO> {
-    this.logger.log(`user: ${user}`);
+    this.logger.log(`user: ${JSON.stringify(user)}`);
     return this.mapper.toDto(await this.service.add(user));
   }
 

@@ -43,7 +43,11 @@ export class SecurityService {
 
   hashPaths = {
     [securePassword.INVALID]: async () => {
-      throw new NotFoundException('User with this email or password not found');
+      throw new NotFoundException(
+        new ErrorObject('USER_NOT_FOUND').customMessage(
+          'User with this username or password not found',
+        ),
+      );
     },
     [securePassword.VALID_NEEDS_REHASH]: async ({ user, password }) => {
       return await this.userService.hashUserPassword(user, password);
